@@ -1,137 +1,168 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#060913">
-<title>NeonFit AI</title>
-<link rel="manifest" href="manifest.json">
-
-<style>
-  :root { --bg:#060913; --card:#0d1326; --cyan:#00F0FF; --violet:#B84DFF; --mint:#00FFA3; --text:#e2e8f0; }
-  * { box-sizing:border-box; font-family:system-ui,sans-serif; }
-  body { margin:0; background:var(--bg); color:var(--text); padding:16px 16px 80px; }
-  h2 { margin:0 0 12px; font-size:1.2rem; background:linear-gradient(90deg,var(--cyan),var(--violet)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  .card { background:var(--card); border:1px solid #1e293b; border-radius:14px; padding:14px; margin-bottom:12px; }
-  input, button { width:100%; padding:10px; border-radius:10px; border:1px solid #334155; background:#090e1c; color:#fff; margin-bottom:8px; font-size:15px; }
-  button { background:linear-gradient(90deg,var(--cyan),var(--violet)); border:none; font-weight:700; color:#060913; cursor:pointer; }
-  .row { display:flex; gap:8px; }
-  .item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #1e293b; font-size:14px; }
-  .mint { color:var(--mint); font-weight:700; }
-  .nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:#090e1c; border-top:1px solid #1e293b; }
-  .nav button { margin:0; border-radius:0; background:none; color:#94a3b8; padding:14px; }
-  .nav button.active { color:var(--cyan); border-top:2px solid var(--cyan); }
-  .hidden { display:none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#07090f">
+  <title>STARK FIT // MARK LXXXV</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="tab-workout">
-  <h2>Workout Tracker</h2>
-  <div class="card">
-    <input id="w-name" placeholder="Übung (z.B. Bankdrücken)">
-    <div class="row">
-      <input id="w-sets" type="number" placeholder="Sätze">
-      <input id="w-reps" type="number" placeholder="Wdh">
-      <input id="w-kg" type="number" placeholder="kg">
+  <div class="hud-header">
+    <div class="hud-title">STARK FIT // HUD</div>
+    <div class="hud-badge" id="hud-clock">SYS ONLINE</div>
+  </div>
+
+  <div class="container">
+
+    <!-- TAB 1: VERLAUF -->
+    <div id="view-history">
+      <div class="sec-title">
+        <span>EINSATZ-PROTOKOLL (VERLAUF)</span>
+        <span id="hist-count" style="color:var(--arc)">0 WORKOUTS</span>
+      </div>
+      <div id="history-list"></div>
     </div>
-    <button onclick="addWorkout()">Speichern</button>
+
+    <!-- TAB 2: WORKOUT & VORLAGEN -->
+    <div id="view-workout" class="hidden">
+      <div id="active-session-box" class="hidden">
+        <div class="live-banner">
+          <div>
+            <div style="font-size:0.7rem;color:var(--gold);font-family:'Orbitron'">AKTIVE MISSION</div>
+            <div id="live-title" style="font-size:1.15rem;font-weight:700;">EMOM</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <div class="timer-pill" id="live-timer">00:00</div>
+            <button class="btn btn-arc btn-sm" onclick="toggleEmomTimer()" id="emom-btn">EMOM 60s</button>
+          </div>
+        </div>
+
+        <div id="live-exercises"></div>
+
+        <div class="row" style="margin-bottom:10px;">
+          <input id="new-ex-name" placeholder="Übung hinzufügen (z.B. Chest Dip)">
+          <button class="btn btn-arc btn-sm" onclick="addExerciseToLive()">+ ÜBUNG</button>
+        </div>
+
+        <div class="row">
+          <button class="btn btn-ghost" onclick="cancelWorkout()">ABBRECHEN</button>
+          <button class="btn btn-crimson" onclick="finishWorkout()">MISSION BEENDEN</button>
+        </div>
+      </div>
+
+      <div id="templates-box">
+        <button class="btn btn-crimson" style="margin-bottom:14px;" onclick="startEmptyWorkout()">
+          + FREIES WORKOUT STARTEN
+        </button>
+
+        <div class="sec-title">
+          <span>MEINE VORLAGEN</span>
+          <button class="btn btn-arc btn-sm" onclick="toggleNewTpl()">+ VORLAGE</button>
+        </div>
+
+        <div id="new-tpl-form" class="stark-card gold-accent hidden">
+          <div class="sec-title">NEUE WORKOUT-VORLAGE</div>
+          <input id="tpl-name" placeholder="Vorlagen-Name (z.B. EMOM / Push)" style="margin-bottom:8px;">
+          <input id="tpl-exs" placeholder="Übungen mit Komma (z.B. Pull Up, Chest Dip)" style="margin-bottom:8px;">
+          <button class="btn btn-gold" onclick="saveTemplate()">VORLAGE SPEICHERN</button>
+        </div>
+
+        <div id="templates-list"></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: J.A.R.V.I.S. KALORIEN & KI -->
+    <div id="view-calories" class="hidden">
+      <div class="stark-card arc-accent">
+        <div class="sec-title">
+          <span>ARC-REACTOR ENERGIE</span>
+          <span id="cal-date" style="color:var(--muted);font-size:0.75rem;"></span>
+        </div>
+
+        <div class="reactor-wrap">
+          <div class="reactor-ring" id="cal-ring">
+            <div class="reactor-inner">
+              <span id="cal-sum" style="font-family:'Orbitron';font-weight:900;font-size:1.05rem;color:#fff;">0</span>
+              <span style="font-size:0.65rem;color:var(--arc);">/ <span id="cal-goal-lbl">2500</span></span>
+            </div>
+          </div>
+          <div class="macro-grid">
+            <div class="macro-box">
+              <div style="font-size:0.7rem;color:var(--muted);">PROTEIN</div>
+              <div id="m-prot" style="font-weight:700;color:var(--mint);font-size:1.05rem;">0g</div>
+            </div>
+            <div class="macro-box">
+              <div style="font-size:0.7rem;color:var(--muted);">CARBS</div>
+              <div id="m-carb" style="font-weight:700;color:var(--gold);font-size:1.05rem;">0g</div>
+            </div>
+            <div class="macro-box">
+              <div style="font-size:0.7rem;color:var(--muted);">FETT</div>
+              <div id="m-fat" style="font-weight:700;color:var(--crimson);font-size:1.05rem;">0g</div>
+            </div>
+          </div>
+        </div>
+
+        <input id="food-input" placeholder="Mahlzeit beschreiben (z.B. 250g Skyr + 1 Banane)..." style="margin-bottom:8px;">
+        <div class="row" style="margin-bottom:8px;">
+          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer;">
+            📷 FOTO-SCAN
+            <input type="file" id="food-img" accept="image/*" capture="environment" class="hidden" onchange="previewFoodImg()">
+          </label>
+          <button class="btn btn-arc" style="flex:2;" onclick="analyzeFoodAI()">J.A.R.V.I.S. ANALYSE</button>
+        </div>
+        <div id="ai-msg" style="font-size:0.85rem;color:var(--arc);min-height:18px;"></div>
+      </div>
+
+      <div class="sec-title">
+        <span>HEUTIGE EINNAHME</span>
+        <button class="btn btn-ghost btn-sm" onclick="resetTodayCals()">RESET</button>
+      </div>
+      <div id="food-list"></div>
+    </div>
+
+    <!-- TAB 4: SYSTEM & SETUP -->
+    <div id="view-setup" class="hidden">
+      <div class="stark-card gold-accent">
+        <div class="sec-title">J.A.R.V.I.S. KI-SCHNITTSTELLE</div>
+        <label style="font-size:0.8rem;color:var(--muted);">GEMINI API KEY (LOKAL GESPEICHERT)</label>
+        <input id="cfg-key" type="password" placeholder="AIzaSy..." style="margin:6px 0 10px;">
+        <label style="font-size:0.8rem;color:var(--muted);">TAGESZIEL (KCAL)</label>
+        <input id="cfg-goal" type="number" value="2500" style="margin:6px 0 10px;">
+        <label style="font-size:0.8rem;color:var(--muted);">KÖRPERGEWICHT (KG – FÜR ZUSATZGEWICHT-TRACKING)</label>
+        <input id="cfg-bw" type="number" step="0.1" value="80" style="margin:6px 0 12px;">
+        <button class="btn btn-gold" onclick="saveSettings()">KONFIGURATION SPEICHERN</button>
+      </div>
+
+      <div class="stark-card">
+        <div class="sec-title">DATENBANK-BACKUP</div>
+        <div class="row">
+          <button class="btn btn-arc" onclick="exportBackup()">JSON EXPORT</button>
+          <button class="btn btn-ghost" onclick="importBackup()">JSON IMPORT</button>
+        </div>
+      </div>
+    </div>
+
   </div>
-  <div id="w-list" class="card"></div>
-</div>
 
-<div id="tab-cal" class="hidden">
-  <h2>Kalorien & KI-Schätzer</h2>
-  <div class="card">
-    <div class="item"><span>Heute gesamt</span><span id="c-total" class="mint">0 kcal</span></div>
-    <input id="c-query" placeholder="Was hast du gegessen? (z.B. 200g Hähnchen + Reis)">
-    <button onclick="estimateAI()">Mit KI schätzen & hinzufügen</button>
-    <div id="ai-status" style="font-size:13px;color:var(--cyan);"></div>
+  <!-- BOTTOM HUD NAVIGATION -->
+  <div class="hud-nav">
+    <button class="nav-item active" id="nav-history" onclick="switchTab('history')">
+      <span class="ico">🕒</span><span>VERLAUF</span>
+    </button>
+    <button class="nav-item center-btn" id="nav-workout" onclick="switchTab('workout')">
+      <span class="ico">+</span><span>WORKOUT</span>
+    </button>
+    <button class="nav-item" id="nav-calories" onclick="switchTab('calories')">
+      <span class="ico">⚡</span><span>KALORIEN</span>
+    </button>
+    <button class="nav-item" id="nav-setup" onclick="switchTab('setup')">
+      <span class="ico">⚙️</span><span>SYSTEM</span>
+    </button>
   </div>
-  <div id="c-list" class="card"></div>
-</div>
 
-<div id="tab-set" class="hidden">
-  <h2>Einstellungen</h2>
-  <div class="card">
-    <input id="api-key" type="password" placeholder="Gemini API-Key (lokal gespeichert)">
-    <button onclick="saveKey()">Key speichern</button>
-    <button style="background:#ef4444;color:#fff;margin-top:8px;" onclick="clearToday()">Heutige Kalorien zurücksetzen</button>
-  </div>
-</div>
-
-<div class="nav">
-  <button id="b-workout" class="active" onclick="showTab('workout')">Workout</button>
-  <button id="b-cal" onclick="showTab('cal')">Kalorien</button>
-  <button id="b-set" onclick="showTab('set')">Setup</button>
-</div>
-
-<script>
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-const $ = id => document.getElementById(id);
-let workouts = JSON.parse(localStorage.getItem('nf_w') || '[]');
-let cals = JSON.parse(localStorage.getItem('nf_c') || '[]');
-$('api-key').value = localStorage.getItem('nf_key') || '';
-
-function showTab(t) {
-  ['workout','cal','set'].forEach(x => {
-    $('tab-'+x).classList.toggle('hidden', x!==t);
-    $('b-'+x).classList.toggle('active', x===t);
-  });
-}
-
-function saveKey() {
-  localStorage.setItem('nf_key', $('api-key').value.trim());
-  alert('API-Key lokal gespeichert.');
-}
-
-function addWorkout() {
-  if (!$('w-name').value) return;
-  workouts.unshift({ n:$('w-name').value, s:$('w-sets').value||0, r:$('w-reps').value||0, k:$('w-kg').value||0, d:new Date().toLocaleDateString('de-DE') });
-  localStorage.setItem('nf_w', JSON.stringify(workouts));
-  $('w-name').value = '';
-  render();
-}
-
-async function estimateAI() {
-  const key = localStorage.getItem('nf_key');
-  const q = $('c-query').value.trim();
-  if (!key) return alert('Bitte zuerst Gemini API-Key unter Setup eintragen.');
-  if (!q) return;
-  $('ai-status').textContent = 'KI rechnet...';
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `Schätze realistische Kalorien (kcal) und Protein (g) für: "${q}". Antworte NUR mit gültigem JSON ohne Markdown: {"item":"Kurzname","kcal":123,"protein":12}` }] }]
-      })
-    });
-    const data = await res.json();
-    const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(raw);
-    cals.unshift(parsed);
-    localStorage.setItem('nf_c', JSON.stringify(cals));
-    $('c-query').value = '';
-    $('ai-status').textContent = `Hinzugefügt: ${parsed.item} (${parsed.kcal} kcal, ${parsed.protein}g P)`;
-    render();
-  } catch (e) {
-    $('ai-status').textContent = 'Fehler bei KI-Abfrage (Key oder Netz prüfen).';
-  }
-}
-
-function clearToday() {
-  cals = [];
-  localStorage.setItem('nf_c', '[]');
-  render();
-}
-
-function render() {
-  $('w-list').innerHTML = workouts.slice(0,15).map(w => `<div class="item"><span>${w.n} (${w.d})</span><span class="mint">${w.s}x${w.r} @ ${w.k}kg</span></div>`).join('') || 'Noch keine Workouts.';
-  $('c-list').innerHTML = cals.map(c => `<div class="item"><span>${c.item} (${c.protein}g P)</span><span class="mint">${c.kcal} kcal</span></div>`).join('') || 'Noch keine Einträge.';
-  $('c-total').textContent = cals.reduce((a,b) => a + Number(b.kcal||0), 0) + ' kcal';
-}
-render();
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
