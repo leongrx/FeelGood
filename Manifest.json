@@ -1,0 +1,17 @@
+{
+  "name": "FeelGood Fitness",
+  "short_name": "FeelGood",
+  "start_url": "/FeelGood/",
+  "scope": "/FeelGood/",
+  "display": "standalone",
+  "background_color": "#060913",
+  "theme_color": "#060913",
+  "description": "Workout & KI-Kalorien Tracker",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
