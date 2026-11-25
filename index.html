@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#060913">
+<title>NeonFit AI</title>
+<style>
+  :root { --bg:#060913; --card:#0d1326; --cyan:#00F0FF; --violet:#B84DFF; --mint:#00FFA3; --text:#e2e8f0; }
+  * { box-sizing:border-box; font-family:system-ui,sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--text); padding:16px 16px 80px; }
+  h2 { margin:0 0 12px; font-size:1.2rem; background:linear-gradient(90deg,var(--cyan),var(--violet)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .card { background:var(--card); border:1px solid #1e293b; border-radius:14px; padding:14px; margin-bottom:12px; }
+  input, button { width:100%; padding:10px; border-radius:10px; border:1px solid #334155; background:#090e1c; color:#fff; margin-bottom:8px; font-size:15px; }
+  button { background:linear-gradient(90deg,var(--cyan),var(--violet)); border:none; font-weight:700; color:#060913; cursor:pointer; }
+  .row { display:flex; gap:8px; }
+  .item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #1e293b; font-size:14px; }
+  .mint { color:var(--mint); font-weight:700; }
+  .nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:#090e1c; border-top:1px solid #1e293b; }
+  .nav button { margin:0; border-radius:0; background:none; color:#94a3b8; padding:14px; }
+  .nav button.active { color:var(--cyan); border-top:2px solid var(--cyan); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+
+<div id="tab-workout">
+  <h2>Workout Tracker</h2>
+  <div class="card">
+    <input id="w-name" placeholder="Übung (z.B. Bankdrücken)">
+    <div class="row">
+      <input id="w-sets" type="number" placeholder="Sätze">
+      <input id="w-reps" type="number" placeholder="Wdh">
+      <input id="w-kg" type="number" placeholder="kg">
+    </div>
+    <button onclick="addWorkout()">Speichern</button>
+  </div>
+  <div id="w-list" class="card"></div>
+</div>
+
+<div id="tab-cal" class="hidden">
+  <h2>Kalorien & KI-Schätzer</h2>
+  <div class="card">
+    <div class="item"><span>Heute gesamt</span><span id="c-total" class="mint">0 kcal</span></div>
+    <input id="c-query" placeholder="Was hast du gegessen? (z.B. 200g Hähnchen + Reis)">
+    <button onclick="estimateAI()">Mit KI schätzen & hinzufügen</button>
+    <div id="ai-status" style="font-size:13px;color:var(--cyan);"></div>
+  </div>
+  <div id="c-list" class="card"></div>
+</div>
+
+<div id="tab-set" class="hidden">
+  <h2>Einstellungen</h2>
+  <div class="card">
+    <input id="api-key" type="password" placeholder="Gemini API-Key (lokal gespeichert)">
+    <button onclick="saveKey()">Key speichern</button>
+    <button style="background:#ef4444;color:#fff;margin-top:8px;" onclick="clearToday()">Heutige Kalorien zurücksetzen</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button id="b-workout" class="active" onclick="showTab('workout')">Workout</button>
+  <button id="b-cal" onclick="showTab('cal')">Kalorien</button>
+  <button id="b-set" onclick="showTab('set')">Setup</button>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let workouts = JSON.parse(localStorage.getItem('nf_w') || '[]');
+let cals = JSON.parse(localStorage.getItem('nf_c') || '[]');
+$('api-key').value = localStorage.getItem('nf_key') || '';
+
+function showTab(t) {
+  ['workout','cal','set'].forEach(x => {
+    $('tab-'+x).classList.toggle('hidden', x!==t);
+    $('b-'+x).classList.toggle('active', x===t);
+  });
+}
+
+function saveKey() {
+  localStorage.setItem('nf_key', $('api-key').value.trim());
+  alert('API-Key lokal gespeichert.');
+}
+
+function addWorkout() {
+  if (!$('w-name').value) return;
+  workouts.unshift({ n:$('w-name').value, s:$('w-sets').value||0, r:$('w-reps').value||0, k:$('w-kg').value||0, d:new Date().toLocaleDateString('de-DE') });
+  localStorage.setItem('nf_w', JSON.stringify(workouts));
+  $('w-name').value = '';
+  render();
+}
+
+async function estimateAI() {
+  const key = localStorage.getItem('nf_key');
+  const q = $('c-query').value.trim();
+  if (!key) return alert('Bitte zuerst Gemini API-Key unter Setup eintragen.');
+  if (!q) return;
+  $('ai-status').textContent = 'KI rechnet...';
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `Schätze realistische Kalorien (kcal) und Protein (g) für: "${q}". Antworte NUR mit gültigem JSON ohne Markdown: {"item":"Kurzname","kcal":123,"protein":12}` }] }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(raw);
+    cals.unshift(parsed);
+    localStorage.setItem('nf_c', JSON.stringify(cals));
+    $('c-query').value = '';
+    $('ai-status').textContent = `Hinzugefügt: ${parsed.item} (${parsed.kcal} kcal, ${parsed.protein}g P)`;
+    render();
+  } catch (e) {
+    $('ai-status').textContent = 'Fehler bei KI-Abfrage (Key oder Netz prüfen).';
+  }
+}
+
+function clearToday() {
+  cals = [];
+  localStorage.setItem('nf_c', '[]');
+  render();
+}
+
+function render() {
+  $('w-list').innerHTML = workouts.slice(0,15).map(w => `<div class="item"><span>${w.n} (${w.d})</span><span class="mint">${w.s}x${w.r} @ ${w.k}kg</span></div>`).join('') || 'Noch keine Workouts.';
+  $('c-list').innerHTML = cals.map(c => `<div class="item"><span>${c.item} (${c.protein}g P)</span><span class="mint">${c.kcal} kcal</span></div>`).join('') || 'Noch keine Einträge.';
+  $('c-total').textContent = cals.reduce((a,b) => a + Number(b.kcal||0), 0) + ' kcal';
+}
+render();
+</script>
+</body>
+</html>
