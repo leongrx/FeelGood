@@ -1,4 +1,9 @@
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+const APP_VERSION = 'v4.0';
+const GITHUB_REPO = 'leongrx/FeelGood';
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js?v=' + Date.now()).catch(() => {});
+}
 
 const $ = id => document.getElementById(id);
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -44,6 +49,45 @@ let timerInterval = null;
 let emomSeconds = 0;
 let emomInterval = null;
 
+// Direkter GitHub-Pull / Cache-Bypass ohne Datenverlust
+async function pullLatestFromGitHub() {
+  const btn = $('pull-btn');
+  if (btn) btn.textContent = 'Lädt...';
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch (e) {}
+  const baseUrl = window.location.origin + window.location.pathname;
+  window.location.replace(baseUrl + '?pull=' + Date.now());
+}
+
+async function fetchGitHubStatus() {
+  const el = $('gh-status');
+  if (!el) return;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main`, { cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const sha = data.sha.slice(0, 7);
+    const time = new Date(data.commit.author.date).toLocaleString('de-DE', {
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+    });
+    el.textContent = `App ${APP_VERSION} · GitHub Stand: #${sha} (${time})`;
+  } catch (e) {
+    el.textContent = `App ${APP_VERSION} · Bereit für GitHub-Pull`;
+  }
+}
+
+function openGitHubRepo(subpath = '') {
+  window.open(`https://github.com/${GITHUB_REPO}${subpath}`, '_blank');
+}
+
 function applyAccent(hex) {
   const color = ACCENT_MAP[hex] ? hex : '#00e5ff';
   document.documentElement.style.setProperty('--accent', color);
@@ -63,7 +107,6 @@ function persist() {
   else localStorage.removeItem('sf_live');
 }
 
-// BMR & TDEE Berechnung (Mifflin-St Jeor)
 function calcDailyTarget() {
   if (Number(state.cfg.goalOverride) > 0) return Number(state.cfg.goalOverride);
   const w = Number(state.cfg.weight) || 80;
@@ -74,14 +117,12 @@ function calcDailyTarget() {
   return Math.round(bmr * (Number(state.cfg.activity) || 1.55));
 }
 
-// Kalorienverbrauch beim Workout / EMOM berechnen (MET-basiert + Lastfaktor)
 function calcWorkoutCalories(durationMin, totalMovedKg, isEmom) {
   const bw = Number(state.cfg.weight) || 80;
   const hours = Math.max(durationMin, 1) / 60;
-  // EMOM / hochintensives Krafttraining: MET ~ 6.5 - 8.0 je nach Dichte
   const met = isEmom ? 7.5 : 5.5;
   const baseBurn = met * bw * hours;
-  const loadBonus = (totalMovedKg / 1000) * 12; // Zusatzverbrauch durch bewegte Last
+  const loadBonus = (totalMovedKg / 1000) * 12;
   return Math.round(baseBurn + loadBonus);
 }
 
@@ -93,7 +134,10 @@ function switchTab(tab) {
   if (tab === 'history') renderHistory();
   if (tab === 'workout') renderWorkoutTab();
   if (tab === 'calories') renderCalories();
-  if (tab === 'setup') loadSettingsUI();
+  if (tab === 'setup') {
+    loadSettingsUI();
+    fetchGitHubStatus();
+  }
 }
 
 function getPreviousSummary(exName) {
@@ -254,8 +298,7 @@ function startEmptyWorkout() {
 
 function renderLiveExercises() {
   const sec = Math.max(60, Math.floor((Date.now() - activeWorkout.startedAt) / 1000));
-  const estKcal = calcLiveCalories(sec);
-  $('live-kcal').textContent = `~${estKcal} kcal`;
+  $('live-kcal').textContent = `~${calcLiveCalories(sec)} kcal`;
 
   $('live-exercises').innerHTML = activeWorkout.exercises.map((ex, eIdx) => `
     <div class="card">
@@ -431,7 +474,6 @@ function finishWorkout() {
 
   const burnedKcal = calcWorkoutCalories(durationMin, totalVol, activeWorkout.isEmom);
 
-  // Verbrannte Kalorien automatisch zu heutigen aktiven Kalorien hinzufügen
   const k = todayKey();
   if (!state.burned[k]) state.burned[k] = [];
   state.burned[k].unshift({
@@ -515,7 +557,7 @@ function saveHistoryAsTemplate(idx) {
   alert(`"${w.name}" als Vorlage gespeichert.`);
 }
 
-// KALORIEN & AKTIVER VERBRAUCH
+// KALORIEN & KI
 function getTodayFoods() {
   const k = todayKey();
   if (!state.cals[k]) state.cals[k] = [];
@@ -599,6 +641,46 @@ async function analyzeFoodAI() {
   }
 }
 
+function renderCalories() {
+  const foods = getTodayFoods();
+  const burns = getTodayBurned();
+  const eaten = foods.reduce((a, b) => a + Number(b.kcal || 0), 0);
+  const activeBurn = burns.reduce((a, b) => a + Number(b.kcal || 0), 0);
+  const p = foods.reduce((a, b) => a + Number(b.protein || 0), 0);
+  const c = foods.reduce((a, b) => a + Number(b.carbs || 0), 0);
+  const f = foods.reduce((a, b) => a + Number(b.fat || 0), 0);
+  const target = calcDailyTarget() + activeBurn;
+  const remaining = target - eaten;
+
+  $('cal-eaten').textContent = eaten;
+  $('cal-burned').textContent = activeBurn;
+  $('cal-rem').textContent = remaining;
+  $('cal-rem').style.color = remaining >= 0 ? 'var(--accent)' : 'var(--danger)';
+  $('cal-macros').textContent = `Ziel inkl. Aktivität: ${target} kcal · P: ${p}g · C: ${c}g · F: ${f}g`;
+
+  $('food-list').innerHTML = foods.map((item, idx) => `
+    <div class="card" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <strong>${item.item}</strong>
+        <div style="font-size:0.8rem;color:var(--muted);">P: ${item.protein}g · C: ${item.carbs}g · F: ${item.fat}g</div>
+      </div>
+      <div class="row">
+        <span style="font-weight:700;color:var(--accent);">${item.kcal} kcal</span>
+        <button class="btn btn-ghost btn-sm" onclick="removeFood(${idx})">✕</button>
+      </div>
+    </div>
+  `).join('') || `<div class="card" style="color:var(--muted);">Heute noch keine Mahlzeiten eingetragen.</div>`;
+
+  $('burn-list').innerHTML = burns.map((b, idx) => `
+    <div class="card" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+      <span>${b.label}</span>
+      <div class="row">
+        <span style="font-weight:700;color:var(--accent);">-${b.kcal} kcal</span>
+        <button class="btn btn-ghost btn-sm" onclick="removeBurn(${idx})">✕</button>
+      </div>
+    </div>
+  `).join('') || `<div class="card" style="color:var(--muted);">Keine aktiven Kalorien eingetragen.</div>`;
+}
 
 function removeFood(idx) { getTodayFoods().splice(idx, 1); persist(); renderCalories(); }
 
