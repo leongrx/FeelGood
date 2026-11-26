@@ -10,7 +10,6 @@
   <title>FeelGood Fitness</title>
   <link rel="manifest" href="manifest.json">
   <script>
-    // Lädt style.css und app.js bei jedem App-Start mit frischem Zeitstempel
     const ts = Date.now();
     document.write('<link rel="stylesheet" href="style.css?v=' + ts + '">');
   </script>
@@ -24,10 +23,24 @@
 
   <div class="container">
 
-    <!-- TAB 1: VERLAUF -->
+    <!-- TAB 1: VERLAUF & DIAGRAMM -->
     <div id="view-history">
+      <div id="history-chart-card" class="card hidden">
+        <div class="sec-head">
+          <span>Übersicht: <span id="chart-metric-lbl" style="color:var(--accent);">Volumen (kg)</span></span>
+          <div class="row" style="gap:4px;">
+            <button class="btn btn-ghost btn-sm" onclick="setChartMetric('totalVol')">kg</button>
+            <button class="btn btn-ghost btn-sm" onclick="setChartMetric('burnedKcal')">kcal</button>
+            <button class="btn btn-ghost btn-sm" onclick="setChartMetric('durationMin')">Min</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div id="chart-bars" class="chart-bars"></div>
+        </div>
+      </div>
+
       <div class="sec-head">
-        <span>Verlauf</span>
+        <span>Verlauf (antippen für Details)</span>
         <span id="hist-count">0 Workouts</span>
       </div>
       <div id="history-list"></div>
@@ -93,7 +106,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: KALORIEN & VERBRAUCH -->
+    <!-- TAB 3: KALORIEN (MANUELL & VERBRAUCH) -->
     <div id="view-calories" class="hidden">
       <div class="card">
         <div class="sec-head"><span>Tagesbilanz</span></div>
@@ -115,16 +128,15 @@
       </div>
 
       <div class="card">
-        <div class="sec-head"><span>Mahlzeit mit KI erfassen</span></div>
-        <input id="food-input" placeholder="z.B. 250g Magerquark mit Beeren" style="margin-bottom:8px;">
-        <div class="row">
-          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer;">
-            📷 Foto
-            <input type="file" id="food-img" accept="image/*" capture="environment" class="hidden" onchange="$('ai-msg').textContent='Foto bereit.'">
-          </label>
-          <button class="btn" style="flex:2;" onclick="analyzeFoodAI()">Mit KI berechnen</button>
+        <div class="sec-head"><span>Mahlzeit eintragen</span></div>
+        <div class="row" style="margin-bottom:8px;">
+          <input id="food-name" placeholder="Mahlzeit (z.B. Skyr)" style="flex:2;">
+          <input id="food-kcal" type="number" placeholder="kcal" style="flex:1;">
         </div>
-        <div id="ai-msg" style="font-size:0.82rem;color:var(--accent);margin-top:6px;"></div>
+        <div class="row">
+          <input id="food-prot" type="number" placeholder="Protein g (opt.)" style="flex:1;">
+          <button class="btn" style="flex:1;" onclick="addManualFood()">+ Hinzufügen</button>
+        </div>
       </div>
 
       <div class="card">
@@ -150,8 +162,8 @@
         <div id="gh-status" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Prüfe GitHub-Stand...</div>
         <button class="btn" style="margin-bottom:8px;" onclick="pullLatestFromGitHub()">↻ Neuesten Stand von GitHub laden</button>
         <div class="row">
-          <button class="btn btn-ghost" onclick="openGitHubRepo('')">GitHub Repo</button>
-          <button class="btn btn-ghost" onclick="openGitHubRepo('/pulls')">Pull Requests</button>
+          <button class="btn btn-ghost" onclick="openGitHubRepo('')">Repo öffnen</button>
+          <button class="btn btn-ghost" onclick="openGitHubRepo('/edit/main/app.js')">app.js bearbeiten</button>
         </div>
       </div>
 
@@ -202,9 +214,6 @@
         <input id="cfg-goal" type="number" placeholder="0">
         <div id="calc-tdee-info" style="font-size:0.82rem;color:var(--accent);margin:8px 0;"></div>
 
-        <label class="lbl">Gemini API-Key (lokal gespeichert)</label>
-        <input id="cfg-key" type="password" placeholder="AIzaSy... oder AQ.Ab8..." style="margin-bottom:12px;">
-
         <button class="btn" onclick="saveSettings()">Einstellungen speichern</button>
       </div>
 
@@ -217,6 +226,23 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- WORKOUT DETAIL MODAL -->
+  <div id="detail-modal" class="modal-backdrop hidden" onclick="if(event.target===this) closeWorkoutDetail()">
+    <div class="modal-sheet">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px;">
+        <strong id="detail-title" style="font-size:1.15rem;">Workout Details</strong>
+        <button class="btn btn-ghost btn-sm" onclick="closeWorkoutDetail()">✕</button>
+      </div>
+      <div id="detail-date" style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;"></div>
+      <div id="detail-stats" class="cal-summary"></div>
+      <div id="detail-exercises"></div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn btn-soft" id="detail-save-tpl-btn">Als Vorlage speichern</button>
+        <button class="btn btn-danger" id="detail-delete-btn">Löschen</button>
+      </div>
+    </div>
   </div>
 
   <!-- NAVIGATION -->
