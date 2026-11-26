@@ -1,4 +1,4 @@
-const APP_VERSION = 'v4.0';
+const APP_VERSION = 'v5.0';
 const GITHUB_REPO = 'leongrx/FeelGood';
 
 if ('serviceWorker' in navigator) {
@@ -32,7 +32,6 @@ let state = {
   cals: JSON.parse(localStorage.getItem('sf_cals') || '{}'),
   burned: JSON.parse(localStorage.getItem('sf_burn') || '{}'),
   cfg: JSON.parse(localStorage.getItem('sf_cfg') || 'null') || {
-    key: '',
     accent: '#00e5ff',
     gender: 'm',
     age: 28,
@@ -48,11 +47,17 @@ let editingTplIdx = null;
 let timerInterval = null;
 let emomSeconds = 0;
 let emomInterval = null;
+let chartMetric = 'totalVol';
 
-// Direkter GitHub-Pull / Cache-Bypass ohne Datenverlust
+// Sync-Zeitpunkt beim Laden merken
+if (!localStorage.getItem('sf_last_sync')) {
+  localStorage.setItem('sf_last_sync', new Date().toISOString());
+}
+
 async function pullLatestFromGitHub() {
   const btn = $('pull-btn');
   if (btn) btn.textContent = 'Lädt...';
+  localStorage.setItem('sf_last_sync', new Date().toISOString());
   try {
     if ('caches' in window) {
       const keys = await caches.keys();
@@ -70,17 +75,22 @@ async function pullLatestFromGitHub() {
 async function fetchGitHubStatus() {
   const el = $('gh-status');
   if (!el) return;
+  const syncISO = localStorage.getItem('sf_last_sync');
+  const syncStr = syncISO
+    ? new Date(syncISO).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : '—';
+
   try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main`, { cache: 'no-store' });
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main?_=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) throw new Error();
     const data = await res.json();
     const sha = data.sha.slice(0, 7);
-    const time = new Date(data.commit.author.date).toLocaleString('de-DE', {
+    const commitTime = new Date(data.commit.author.date).toLocaleString('de-DE', {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     });
-    el.textContent = `App ${APP_VERSION} · GitHub Stand: #${sha} (${time})`;
+    el.innerHTML = `App <b>${APP_VERSION}</b> · Letzter App-Sync: <b>${syncStr} Uhr</b><br>Letzter GitHub-Commit: #${sha} (${commitTime})`;
   } catch (e) {
-    el.textContent = `App ${APP_VERSION} · Bereit für GitHub-Pull`;
+    el.innerHTML = `App <b>${APP_VERSION}</b> · Letzter App-Sync: <b>${syncStr} Uhr</b>`;
   }
 }
 
@@ -464,7 +474,7 @@ function finishWorkout() {
       name: ex.name,
       kg: ex.kg,
       reps: maxReps,
-      sets: validSets,
+      sets: validSets.map(s => ({ kg: ex.kg, reps: s.reps })),
       bestText: validSets.length ? `+${ex.kg} kg × ${maxReps}` : '—',
       bestScore: score
     };
@@ -501,9 +511,51 @@ function finishWorkout() {
   switchTab('history');
 }
 
-// VERLAUF
+// VERLAUF + DIAGRAMM + DETAIL-ANSICHT
+function setChartMetric(metric) {
+  chartMetric = metric;
+  renderHistoryChart();
+}
+
+function renderHistoryChart() {
+  const box = $('history-chart-card');
+  if (!state.history.length) {
+    box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+
+  const recent = state.history.slice(0, 10).reverse();
+  const values = recent.map(w => Number(w[chartMetric]) || 0);
+  const maxVal = Math.max(...values, 1);
+
+  const labels = {
+    totalVol: 'Volumen (kg)',
+    burnedKcal: 'Kalorien (kcal)',
+    durationMin: 'Dauer (Min)'
+  };
+  $('chart-metric-lbl').textContent = labels[chartMetric];
+
+  $('chart-bars').innerHTML = recent.map((w, i) => {
+    const val = values[i];
+    const pct = Math.max(6, Math.round((val / maxVal) * 100));
+    const d = new Date(w.dateISO);
+    const dayLbl = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    const origIdx = state.history.findIndex(x => x.id === w.id);
+    return `
+      <div class="bar-col" onclick="openWorkoutDetail(${origIdx})">
+        <div class="bar-val">${val}</div>
+        <div class="bar-fill" style="height:${pct}%;"></div>
+        <div class="bar-lbl">${dayLbl}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderHistory() {
   $('hist-count').textContent = `${state.history.length} Workouts`;
+  renderHistoryChart();
+
   if (!state.history.length) {
     $('history-list').innerHTML = `<div class="card" style="color:var(--muted);">Noch keine Workouts gespeichert.</div>`;
     return;
@@ -515,13 +567,13 @@ function renderHistory() {
       + ' · ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
     return `
-      <div class="card">
+      <div class="card clickable" onclick="openWorkoutDetail(${idx})">
         <div class="row" style="justify-content:space-between;">
           <div>
             <strong style="font-size:1.05rem;">${w.name}</strong>
             <div style="font-size:0.8rem;color:var(--muted);margin-bottom:8px;">${dateStr}</div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="saveHistoryAsTemplate(${idx})">Als Vorlage</button>
+          <span style="font-size:0.8rem;color:var(--accent);font-weight:600;">Details ›</span>
         </div>
         ${w.exercises.map(ex => `
           <div class="hist-line">
@@ -538,6 +590,50 @@ function renderHistory() {
       </div>
     `;
   }).join('');
+}
+
+function openWorkoutDetail(idx) {
+  const w = state.history[idx];
+  if (!w) return;
+  const d = new Date(w.dateISO);
+  const dateStr = d.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+    + ' um ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+  $('detail-title').textContent = w.name;
+  $('detail-date').textContent = dateStr;
+  $('detail-stats').innerHTML = `
+    <div class="stat-box"><div class="stat-val">${w.durationMin}m</div><div class="stat-lbl">Dauer</div></div>
+    <div class="stat-box"><div class="stat-val">${w.totalVol} kg</div><div class="stat-lbl">Volumen</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--accent);">${w.burnedKcal || 0}</div><div class="stat-lbl">Verbrannt</div></div>
+  `;
+
+  $('detail-exercises').innerHTML = w.exercises.map(ex => `
+    <div class="card" style="background:var(--surface-2);padding:10px 12px;">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:6px;">${ex.name} (+${ex.kg} kg)</div>
+      ${ex.sets.map((s, sIdx) => `
+        <div class="hist-line" style="font-size:0.88rem;">
+          <span style="color:var(--muted);">Set ${sIdx + 1}</span>
+          <span>+${s.kg ?? ex.kg} kg × ${s.reps} Wdhl.</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
+  $('detail-save-tpl-btn').onclick = () => { saveHistoryAsTemplate(idx); closeWorkoutDetail(); };
+  $('detail-delete-btn').onclick = () => { deleteHistoryItem(idx); };
+  $('detail-modal').classList.remove('hidden');
+}
+
+function closeWorkoutDetail() {
+  $('detail-modal').classList.add('hidden');
+}
+
+function deleteHistoryItem(idx) {
+  if (!confirm('Dieses Training wirklich aus dem Verlauf löschen?')) return;
+  state.history.splice(idx, 1);
+  persist();
+  closeWorkoutDetail();
+  renderHistory();
 }
 
 function saveHistoryAsTemplate(idx) {
@@ -557,7 +653,7 @@ function saveHistoryAsTemplate(idx) {
   alert(`"${w.name}" als Vorlage gespeichert.`);
 }
 
-// KALORIEN & KI
+// KALORIEN (OHNE KI – MANUELL & AKTIV)
 function getTodayFoods() {
   const k = todayKey();
   if (!state.cals[k]) state.cals[k] = [];
@@ -568,6 +664,20 @@ function getTodayBurned() {
   const k = todayKey();
   if (!state.burned[k]) state.burned[k] = [];
   return state.burned[k];
+}
+
+function addManualFood() {
+  const item = $('food-name').value.trim() || 'Mahlzeit';
+  const kcal = parseInt($('food-kcal').value) || 0;
+  const protein = parseInt($('food-prot').value) || 0;
+  if (kcal <= 0) return alert('Bitte Kalorien (kcal) eingeben.');
+
+  getTodayFoods().unshift({ item, kcal, protein });
+  $('food-name').value = '';
+  $('food-kcal').value = '';
+  $('food-prot').value = '';
+  persist();
+  renderCalories();
 }
 
 function addManualBurn() {
@@ -581,74 +691,15 @@ function addManualBurn() {
   renderCalories();
 }
 
-function removeBurn(idx) {
-  getTodayBurned().splice(idx, 1);
-  persist();
-  renderCalories();
-}
-
-function fileToBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
-
-async function analyzeFoodAI() {
-  const key = (state.cfg.key || '').trim();
-  if (!key) return alert('Bitte zuerst in den Einstellungen deinen Gemini API-Key hinterlegen.');
-  const text = $('food-input').value.trim();
-  const file = $('food-img').files[0];
-  if (!text && !file) return;
-
-  $('ai-msg').textContent = 'Berechne Nährwerte...';
-  try {
-    const parts = [{
-      text: `Schätze realistische Kalorien und Makros für: "${text || 'siehe Bild'}". Antworte NUR mit gültigem JSON ohne Markdown: {"item":"Kurzname","kcal":400,"protein":30,"carbs":40,"fat":12}`
-    }];
-    if (file) {
-      const b64 = await fileToBase64(file);
-      parts.push({ inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } });
-    }
-
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': key
-      },
-      body: JSON.stringify({ contents: [{ parts }] })
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error?.message || `HTTP ${res.status}`);
-    }
-
-    const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(raw);
-
-    getTodayFoods().unshift(parsed);
-    $('food-input').value = '';
-    $('food-img').value = '';
-    $('ai-msg').textContent = `Hinzugefügt: ${parsed.item} (${parsed.kcal} kcal)`;
-    persist();
-    renderCalories();
-  } catch (e) {
-    $('ai-msg').textContent = `Fehler: ${e.message}`;
-  }
-}
+function removeFood(idx) { getTodayFoods().splice(idx, 1); persist(); renderCalories(); }
+function removeBurn(idx) { getTodayBurned().splice(idx, 1); persist(); renderCalories(); }
 
 function renderCalories() {
   const foods = getTodayFoods();
   const burns = getTodayBurned();
   const eaten = foods.reduce((a, b) => a + Number(b.kcal || 0), 0);
   const activeBurn = burns.reduce((a, b) => a + Number(b.kcal || 0), 0);
-  const p = foods.reduce((a, b) => a + Number(b.protein || 0), 0);
-  const c = foods.reduce((a, b) => a + Number(b.carbs || 0), 0);
-  const f = foods.reduce((a, b) => a + Number(b.fat || 0), 0);
+  const prot = foods.reduce((a, b) => a + Number(b.protein || 0), 0);
   const target = calcDailyTarget() + activeBurn;
   const remaining = target - eaten;
 
@@ -656,13 +707,13 @@ function renderCalories() {
   $('cal-burned').textContent = activeBurn;
   $('cal-rem').textContent = remaining;
   $('cal-rem').style.color = remaining >= 0 ? 'var(--accent)' : 'var(--danger)';
-  $('cal-macros').textContent = `Ziel inkl. Aktivität: ${target} kcal · P: ${p}g · C: ${c}g · F: ${f}g`;
+  $('cal-macros').textContent = `Tagesziel inkl. Aktivität: ${target} kcal · Protein gesamt: ${prot}g`;
 
   $('food-list').innerHTML = foods.map((item, idx) => `
     <div class="card" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
       <div>
         <strong>${item.item}</strong>
-        <div style="font-size:0.8rem;color:var(--muted);">P: ${item.protein}g · C: ${item.carbs}g · F: ${item.fat}g</div>
+        ${item.protein ? `<div style="font-size:0.8rem;color:var(--muted);">Protein: ${item.protein}g</div>` : ''}
       </div>
       <div class="row">
         <span style="font-weight:700;color:var(--accent);">${item.kcal} kcal</span>
@@ -682,8 +733,6 @@ function renderCalories() {
   `).join('') || `<div class="card" style="color:var(--muted);">Keine aktiven Kalorien eingetragen.</div>`;
 }
 
-function removeFood(idx) { getTodayFoods().splice(idx, 1); persist(); renderCalories(); }
-
 // EINSTELLUNGEN
 function selectAccent(hex) {
   state.cfg.accent = hex;
@@ -692,7 +741,6 @@ function selectAccent(hex) {
 }
 
 function loadSettingsUI() {
-  $('cfg-key').value = state.cfg.key || '';
   $('cfg-gender').value = state.cfg.gender || 'm';
   $('cfg-age').value = state.cfg.age || 28;
   $('cfg-height').value = state.cfg.height || 180;
@@ -703,7 +751,6 @@ function loadSettingsUI() {
 }
 
 function saveSettings() {
-  state.cfg.key = $('cfg-key').value.trim();
   state.cfg.gender = $('cfg-gender').value;
   state.cfg.age = parseInt($('cfg-age').value) || 28;
   state.cfg.height = parseInt($('cfg-height').value) || 180;
