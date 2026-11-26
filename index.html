@@ -3,16 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#0b0e14">
   <title>FeelGood Fitness</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <script>
+    // Lädt style.css und app.js bei jedem App-Start mit frischem Zeitstempel
+    const ts = Date.now();
+    document.write('<link rel="stylesheet" href="style.css?v=' + ts + '">');
+  </script>
 </head>
 <body>
 
   <div class="topbar">
     <div class="topbar-title">Feel<span class="topbar-accent">Good</span></div>
-    <div style="font-size:0.8rem;color:var(--muted);" id="top-sub">Workout & Kalorien</div>
+    <button class="btn btn-soft btn-sm" id="pull-btn" onclick="pullLatestFromGitHub()">↻ Update</button>
   </div>
 
   <div class="container">
@@ -28,7 +35,6 @@
 
     <!-- TAB 2: WORKOUT & VORLAGEN -->
     <div id="view-workout" class="hidden">
-      <!-- Aktives Workout -->
       <div id="active-session-box" class="hidden">
         <div class="live-bar">
           <div>
@@ -58,7 +64,6 @@
         </div>
       </div>
 
-      <!-- Vorlagen -->
       <div id="templates-box">
         <button class="btn" style="margin-bottom:14px;" onclick="startEmptyWorkout()">+ Freies Workout starten</button>
 
@@ -109,7 +114,6 @@
         <div id="cal-macros" style="font-size:0.8rem;color:var(--muted);text-align:center;"></div>
       </div>
 
-      <!-- Essen mit KI -->
       <div class="card">
         <div class="sec-head"><span>Mahlzeit mit KI erfassen</span></div>
         <input id="food-input" placeholder="z.B. 250g Magerquark mit Beeren" style="margin-bottom:8px;">
@@ -123,7 +127,6 @@
         <div id="ai-msg" style="font-size:0.82rem;color:var(--accent);margin-top:6px;"></div>
       </div>
 
-      <!-- Aktive Kalorien eintragen -->
       <div class="card">
         <div class="sec-head"><span>Aktive Kalorien hinzufügen</span></div>
         <div class="row">
@@ -140,8 +143,18 @@
       <div id="burn-list"></div>
     </div>
 
-    <!-- TAB 4: EINSTELLUNGEN -->
+    <!-- TAB 4: EINSTELLUNGEN & GITHUB SYNC -->
     <div id="view-setup" class="hidden">
+      <div class="card">
+        <div class="sec-head"><span>GitHub Sync & Pull</span></div>
+        <div id="gh-status" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Prüfe GitHub-Stand...</div>
+        <button class="btn" style="margin-bottom:8px;" onclick="pullLatestFromGitHub()">↻ Neuesten Stand von GitHub laden</button>
+        <div class="row">
+          <button class="btn btn-ghost" onclick="openGitHubRepo('')">GitHub Repo</button>
+          <button class="btn btn-ghost" onclick="openGitHubRepo('/pulls')">Pull Requests</button>
+        </div>
+      </div>
+
       <div class="card">
         <div class="sec-head"><span>App-Farbe</span></div>
         <div class="swatches">
@@ -190,7 +203,7 @@
         <div id="calc-tdee-info" style="font-size:0.82rem;color:var(--accent);margin:8px 0;"></div>
 
         <label class="lbl">Gemini API-Key (lokal gespeichert)</label>
-        <input id="cfg-key" type="password" placeholder="AIzaSy..." style="margin-bottom:12px;">
+        <input id="cfg-key" type="password" placeholder="AIzaSy... oder AQ.Ab8..." style="margin-bottom:12px;">
 
         <button class="btn" onclick="saveSettings()">Einstellungen speichern</button>
       </div>
@@ -222,6 +235,8 @@
     </button>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    document.write('<script src="app.js?v=' + ts + '"><\/script>');
+  </script>
 </body>
 </html>
