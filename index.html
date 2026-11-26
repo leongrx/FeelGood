@@ -3,163 +3,222 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#07090f">
-  <title>STARK FIT // MARK LXXXV</title>
+  <meta name="theme-color" content="#0b0e14">
+  <title>FeelGood Fitness</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="hud-header">
-    <div class="hud-title">STARK FIT // HUD</div>
-    <div class="hud-badge" id="hud-clock">SYS ONLINE</div>
+  <div class="topbar">
+    <div class="topbar-title">Feel<span class="topbar-accent">Good</span></div>
+    <div style="font-size:0.8rem;color:var(--muted);" id="top-sub">Workout & Kalorien</div>
   </div>
 
   <div class="container">
 
     <!-- TAB 1: VERLAUF -->
     <div id="view-history">
-      <div class="sec-title">
-        <span>EINSATZ-PROTOKOLL (VERLAUF)</span>
-        <span id="hist-count" style="color:var(--arc)">0 WORKOUTS</span>
+      <div class="sec-head">
+        <span>Verlauf</span>
+        <span id="hist-count">0 Workouts</span>
       </div>
       <div id="history-list"></div>
     </div>
 
     <!-- TAB 2: WORKOUT & VORLAGEN -->
     <div id="view-workout" class="hidden">
+      <!-- Aktives Workout -->
       <div id="active-session-box" class="hidden">
-        <div class="live-banner">
+        <div class="live-bar">
           <div>
-            <div style="font-size:0.7rem;color:var(--gold);font-family:'Orbitron'">AKTIVE MISSION</div>
-            <div id="live-title" style="font-size:1.15rem;font-weight:700;">EMOM</div>
+            <div id="live-title" style="font-weight:700;font-size:1.05rem;">Workout</div>
+            <div style="font-size:0.8rem;color:var(--muted);">Verbrauch: <span id="live-kcal" style="color:var(--accent);font-weight:700;">~0 kcal</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <div class="timer-pill" id="live-timer">00:00</div>
-            <button class="btn btn-arc btn-sm" onclick="toggleEmomTimer()" id="emom-btn">EMOM 60s</button>
+          <div class="row" style="gap:6px;">
+            <div class="pill" id="live-timer">00:00</div>
+            <button class="btn btn-soft btn-sm" id="emom-btn" onclick="toggleEmomTimer()">EMOM 60s</button>
           </div>
         </div>
 
         <div id="live-exercises"></div>
 
-        <div class="row" style="margin-bottom:10px;">
-          <input id="new-ex-name" placeholder="Übung hinzufügen (z.B. Chest Dip)">
-          <button class="btn btn-arc btn-sm" onclick="addExerciseToLive()">+ ÜBUNG</button>
+        <div class="card">
+          <div class="sec-head" style="margin-bottom:6px;"><span>Übung hinzufügen</span></div>
+          <div class="row">
+            <input id="new-ex-name" placeholder="Name (z.B. Chest Dip)" style="flex:2;">
+            <input id="new-ex-kg" type="number" step="0.5" placeholder="+kg" style="flex:1;">
+            <button class="btn btn-soft btn-sm" onclick="addExerciseToLive()">+</button>
+          </div>
         </div>
 
         <div class="row">
-          <button class="btn btn-ghost" onclick="cancelWorkout()">ABBRECHEN</button>
-          <button class="btn btn-crimson" onclick="finishWorkout()">MISSION BEENDEN</button>
+          <button class="btn btn-ghost" onclick="cancelWorkout()">Abbrechen</button>
+          <button class="btn" onclick="finishWorkout()">Beenden & Speichern</button>
         </div>
       </div>
 
+      <!-- Vorlagen -->
       <div id="templates-box">
-        <button class="btn btn-crimson" style="margin-bottom:14px;" onclick="startEmptyWorkout()">
-          + FREIES WORKOUT STARTEN
-        </button>
+        <button class="btn" style="margin-bottom:14px;" onclick="startEmptyWorkout()">+ Freies Workout starten</button>
 
-        <div class="sec-title">
-          <span>MEINE VORLAGEN</span>
-          <button class="btn btn-arc btn-sm" onclick="toggleNewTpl()">+ VORLAGE</button>
+        <div class="sec-head">
+          <span>Workout-Vorlagen</span>
+          <button class="btn btn-soft btn-sm" onclick="openNewTemplateForm()">+ Neue Vorlage</button>
         </div>
 
-        <div id="new-tpl-form" class="stark-card gold-accent hidden">
-          <div class="sec-title">NEUE WORKOUT-VORLAGE</div>
-          <input id="tpl-name" placeholder="Vorlagen-Name (z.B. EMOM / Push)" style="margin-bottom:8px;">
-          <input id="tpl-exs" placeholder="Übungen mit Komma (z.B. Pull Up, Chest Dip)" style="margin-bottom:8px;">
-          <button class="btn btn-gold" onclick="saveTemplate()">VORLAGE SPEICHERN</button>
+        <div id="tpl-editor" class="card hidden">
+          <div class="sec-head">
+            <span id="tpl-form-title">Neue Vorlage</span>
+            <button class="btn btn-ghost btn-sm" onclick="closeTemplateForm()">✕</button>
+          </div>
+          <label class="lbl">Name der Vorlage</label>
+          <input id="tpl-name" placeholder="z.B. EMOM">
+          <label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:0.9rem;">
+            <input type="checkbox" id="tpl-is-emom" style="width:auto;"> Als EMOM-Workout markieren (höherer Kalorienfaktor)
+          </label>
+          <div id="tpl-ex-builder"></div>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn btn-ghost" onclick="addBuilderRow()">+ Übung</button>
+            <button class="btn" onclick="saveTemplate()">Vorlage speichern</button>
+          </div>
         </div>
 
         <div id="templates-list"></div>
       </div>
     </div>
 
-    <!-- TAB 3: J.A.R.V.I.S. KALORIEN & KI -->
+    <!-- TAB 3: KALORIEN & VERBRAUCH -->
     <div id="view-calories" class="hidden">
-      <div class="stark-card arc-accent">
-        <div class="sec-title">
-          <span>ARC-REACTOR ENERGIE</span>
-          <span id="cal-date" style="color:var(--muted);font-size:0.75rem;"></span>
-        </div>
-
-        <div class="reactor-wrap">
-          <div class="reactor-ring" id="cal-ring">
-            <div class="reactor-inner">
-              <span id="cal-sum" style="font-family:'Orbitron';font-weight:900;font-size:1.05rem;color:#fff;">0</span>
-              <span style="font-size:0.65rem;color:var(--arc);">/ <span id="cal-goal-lbl">2500</span></span>
-            </div>
+      <div class="card">
+        <div class="sec-head"><span>Tagesbilanz</span></div>
+        <div class="cal-summary">
+          <div class="stat-box">
+            <div class="stat-val" id="cal-eaten">0</div>
+            <div class="stat-lbl">Gegessen</div>
           </div>
-          <div class="macro-grid">
-            <div class="macro-box">
-              <div style="font-size:0.7rem;color:var(--muted);">PROTEIN</div>
-              <div id="m-prot" style="font-weight:700;color:var(--mint);font-size:1.05rem;">0g</div>
-            </div>
-            <div class="macro-box">
-              <div style="font-size:0.7rem;color:var(--muted);">CARBS</div>
-              <div id="m-carb" style="font-weight:700;color:var(--gold);font-size:1.05rem;">0g</div>
-            </div>
-            <div class="macro-box">
-              <div style="font-size:0.7rem;color:var(--muted);">FETT</div>
-              <div id="m-fat" style="font-weight:700;color:var(--crimson);font-size:1.05rem;">0g</div>
-            </div>
+          <div class="stat-box">
+            <div class="stat-val" id="cal-burned" style="color:var(--accent);">0</div>
+            <div class="stat-lbl">Aktiv verbrannt</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="cal-rem">2500</div>
+            <div class="stat-lbl">Übrig</div>
           </div>
         </div>
+        <div id="cal-macros" style="font-size:0.8rem;color:var(--muted);text-align:center;"></div>
+      </div>
 
-        <input id="food-input" placeholder="Mahlzeit beschreiben (z.B. 250g Skyr + 1 Banane)..." style="margin-bottom:8px;">
-        <div class="row" style="margin-bottom:8px;">
+      <!-- Essen mit KI -->
+      <div class="card">
+        <div class="sec-head"><span>Mahlzeit mit KI erfassen</span></div>
+        <input id="food-input" placeholder="z.B. 250g Magerquark mit Beeren" style="margin-bottom:8px;">
+        <div class="row">
           <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer;">
-            📷 FOTO-SCAN
-            <input type="file" id="food-img" accept="image/*" capture="environment" class="hidden" onchange="previewFoodImg()">
+            📷 Foto
+            <input type="file" id="food-img" accept="image/*" capture="environment" class="hidden" onchange="$('ai-msg').textContent='Foto bereit.'">
           </label>
-          <button class="btn btn-arc" style="flex:2;" onclick="analyzeFoodAI()">J.A.R.V.I.S. ANALYSE</button>
+          <button class="btn" style="flex:2;" onclick="analyzeFoodAI()">Mit KI berechnen</button>
         </div>
-        <div id="ai-msg" style="font-size:0.85rem;color:var(--arc);min-height:18px;"></div>
+        <div id="ai-msg" style="font-size:0.82rem;color:var(--accent);margin-top:6px;"></div>
       </div>
 
-      <div class="sec-title">
-        <span>HEUTIGE EINNAHME</span>
-        <button class="btn btn-ghost btn-sm" onclick="resetTodayCals()">RESET</button>
+      <!-- Aktive Kalorien eintragen -->
+      <div class="card">
+        <div class="sec-head"><span>Aktive Kalorien hinzufügen</span></div>
+        <div class="row">
+          <input id="burn-label" placeholder="z.B. Joggen, Radfahren" style="flex:2;">
+          <input id="burn-kcal" type="number" placeholder="kcal" style="flex:1;">
+          <button class="btn btn-soft btn-sm" onclick="addManualBurn()">+</button>
+        </div>
       </div>
+
+      <div class="sec-head"><span>Heutige Mahlzeiten</span></div>
       <div id="food-list"></div>
+
+      <div class="sec-head" style="margin-top:14px;"><span>Verbrannte Aktivkalorien</span></div>
+      <div id="burn-list"></div>
     </div>
 
-    <!-- TAB 4: SYSTEM & SETUP -->
+    <!-- TAB 4: EINSTELLUNGEN -->
     <div id="view-setup" class="hidden">
-      <div class="stark-card gold-accent">
-        <div class="sec-title">J.A.R.V.I.S. KI-SCHNITTSTELLE</div>
-        <label style="font-size:0.8rem;color:var(--muted);">GEMINI API KEY (LOKAL GESPEICHERT)</label>
-        <input id="cfg-key" type="password" placeholder="AIzaSy..." style="margin:6px 0 10px;">
-        <label style="font-size:0.8rem;color:var(--muted);">TAGESZIEL (KCAL)</label>
-        <input id="cfg-goal" type="number" value="2500" style="margin:6px 0 10px;">
-        <label style="font-size:0.8rem;color:var(--muted);">KÖRPERGEWICHT (KG – FÜR ZUSATZGEWICHT-TRACKING)</label>
-        <input id="cfg-bw" type="number" step="0.1" value="80" style="margin:6px 0 12px;">
-        <button class="btn btn-gold" onclick="saveSettings()">KONFIGURATION SPEICHERN</button>
+      <div class="card">
+        <div class="sec-head"><span>App-Farbe</span></div>
+        <div class="swatches">
+          <div class="swatch" data-color="#00e5ff" style="background:#00e5ff;" onclick="selectAccent('#00e5ff')"></div>
+          <div class="swatch" data-color="#ef4444" style="background:#ef4444;" onclick="selectAccent('#ef4444')"></div>
+          <div class="swatch" data-color="#f59e0b" style="background:#f59e0b;" onclick="selectAccent('#f59e0b')"></div>
+          <div class="swatch" data-color="#10b981" style="background:#10b981;" onclick="selectAccent('#10b981')"></div>
+          <div class="swatch" data-color="#a855f7" style="background:#a855f7;" onclick="selectAccent('#a855f7')"></div>
+        </div>
       </div>
 
-      <div class="stark-card">
-        <div class="sec-title">DATENBANK-BACKUP</div>
+      <div class="card">
+        <div class="sec-head"><span>Körperdaten & Kalorienziel</span></div>
+        <div class="grid-2">
+          <div>
+            <label class="lbl">Geschlecht</label>
+            <select id="cfg-gender">
+              <option value="m">Männlich</option>
+              <option value="f">Weiblich</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Alter (Jahre)</label>
+            <input id="cfg-age" type="number">
+          </div>
+          <div>
+            <label class="lbl">Größe (cm)</label>
+            <input id="cfg-height" type="number">
+          </div>
+          <div>
+            <label class="lbl">Gewicht (kg)</label>
+            <input id="cfg-weight" type="number" step="0.1">
+          </div>
+        </div>
+
+        <label class="lbl">Alltags-Aktivität (ohne Sport)</label>
+        <select id="cfg-activity">
+          <option value="1.2">Wenig Bewegung (Büro)</option>
+          <option value="1.375">Leicht aktiv (1–2x/Woche)</option>
+          <option value="1.55">Moderat aktiv (3–4x/Woche)</option>
+          <option value="1.725">Sehr aktiv (5+x/Woche)</option>
+        </select>
+
+        <label class="lbl">Eigenes Kalorienziel (optional, 0 = automatisch)</label>
+        <input id="cfg-goal" type="number" placeholder="0">
+        <div id="calc-tdee-info" style="font-size:0.82rem;color:var(--accent);margin:8px 0;"></div>
+
+        <label class="lbl">Gemini API-Key (lokal gespeichert)</label>
+        <input id="cfg-key" type="password" placeholder="AIzaSy..." style="margin-bottom:12px;">
+
+        <button class="btn" onclick="saveSettings()">Einstellungen speichern</button>
+      </div>
+
+      <div class="card">
+        <div class="sec-head"><span>Daten-Backup</span></div>
         <div class="row">
-          <button class="btn btn-arc" onclick="exportBackup()">JSON EXPORT</button>
-          <button class="btn btn-ghost" onclick="importBackup()">JSON IMPORT</button>
+          <button class="btn btn-ghost" onclick="exportBackup()">JSON Export</button>
+          <button class="btn btn-ghost" onclick="importBackup()">JSON Import</button>
         </div>
       </div>
     </div>
 
   </div>
 
-  <!-- BOTTOM HUD NAVIGATION -->
-  <div class="hud-nav">
-    <button class="nav-item active" id="nav-history" onclick="switchTab('history')">
-      <span class="ico">🕒</span><span>VERLAUF</span>
+  <!-- NAVIGATION -->
+  <div class="nav">
+    <button id="nav-history" class="active" onclick="switchTab('history')">
+      <span class="ico">🕒</span><span>Verlauf</span>
     </button>
-    <button class="nav-item center-btn" id="nav-workout" onclick="switchTab('workout')">
-      <span class="ico">+</span><span>WORKOUT</span>
+    <button id="nav-workout" onclick="switchTab('workout')">
+      <span class="ico">➕</span><span>Workout</span>
     </button>
-    <button class="nav-item" id="nav-calories" onclick="switchTab('calories')">
-      <span class="ico">⚡</span><span>KALORIEN</span>
+    <button id="nav-calories" onclick="switchTab('calories')">
+      <span class="ico">🔥</span><span>Kalorien</span>
     </button>
-    <button class="nav-item" id="nav-setup" onclick="switchTab('setup')">
-      <span class="ico">⚙️</span><span>SYSTEM</span>
+    <button id="nav-setup" onclick="switchTab('setup')">
+      <span class="ico">⚙️</span><span>Setup</span>
     </button>
   </div>
 
