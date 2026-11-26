@@ -555,7 +555,7 @@ function fileToBase64(file) {
 }
 
 async function analyzeFoodAI() {
-  const key = state.cfg.key;
+  const key = (state.cfg.key || '').trim();
   if (!key) return alert('Bitte zuerst in den Einstellungen deinen Gemini API-Key hinterlegen.');
   const text = $('food-input').value.trim();
   const file = $('food-img').files[0];
@@ -571,12 +571,20 @@ async function analyzeFoodAI() {
       parts.push({ inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } });
     }
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': key
+      },
       body: JSON.stringify({ contents: [{ parts }] })
     });
+
     const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error?.message || `HTTP ${res.status}`);
+    }
+
     const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(raw);
 
@@ -587,50 +595,10 @@ async function analyzeFoodAI() {
     persist();
     renderCalories();
   } catch (e) {
-    $('ai-msg').textContent = 'Fehler bei KI-Abfrage (Key oder Verbindung prüfen).';
+    $('ai-msg').textContent = `Fehler: ${e.message}`;
   }
 }
 
-function renderCalories() {
-  const foods = getTodayFoods();
-  const burns = getTodayBurned();
-  const eaten = foods.reduce((a, b) => a + Number(b.kcal || 0), 0);
-  const activeBurn = burns.reduce((a, b) => a + Number(b.kcal || 0), 0);
-  const p = foods.reduce((a, b) => a + Number(b.protein || 0), 0);
-  const c = foods.reduce((a, b) => a + Number(b.carbs || 0), 0);
-  const f = foods.reduce((a, b) => a + Number(b.fat || 0), 0);
-  const target = calcDailyTarget() + activeBurn;
-  const remaining = target - eaten;
-
-  $('cal-eaten').textContent = eaten;
-  $('cal-burned').textContent = activeBurn;
-  $('cal-rem').textContent = remaining;
-  $('cal-rem').style.color = remaining >= 0 ? 'var(--accent)' : 'var(--danger)';
-  $('cal-macros').textContent = `Ziel inkl. Aktivität: ${target} kcal · P: ${p}g · C: ${c}g · F: ${f}g`;
-
-  $('food-list').innerHTML = foods.map((item, idx) => `
-    <div class="card" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <strong>${item.item}</strong>
-        <div style="font-size:0.8rem;color:var(--muted);">P: ${item.protein}g · C: ${item.carbs}g · F: ${item.fat}g</div>
-      </div>
-      <div class="row">
-        <span style="font-weight:700;color:var(--accent);">${item.kcal} kcal</span>
-        <button class="btn btn-ghost btn-sm" onclick="removeFood(${idx})">✕</button>
-      </div>
-    </div>
-  `).join('') || `<div class="card" style="color:var(--muted);">Heute noch keine Mahlzeiten eingetragen.</div>`;
-
-  $('burn-list').innerHTML = burns.map((b, idx) => `
-    <div class="card" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
-      <span>${b.label}</span>
-      <div class="row">
-        <span style="font-weight:700;color:var(--accent);">-${b.kcal} kcal</span>
-        <button class="btn btn-ghost btn-sm" onclick="removeBurn(${idx})">✕</button>
-      </div>
-    </div>
-  `).join('') || `<div class="card" style="color:var(--muted);">Keine aktiven Kalorien eingetragen.</div>`;
-}
 
 function removeFood(idx) { getTodayFoods().splice(idx, 1); persist(); renderCalories(); }
 
