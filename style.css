@@ -41,6 +41,8 @@ body {
   padding: 14px;
   margin-bottom: 12px;
 }
+.card.clickable { cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+.card.clickable:active { transform: scale(0.99); border-color: var(--accent); }
 
 .sec-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -76,6 +78,27 @@ label.lbl {
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
+/* Chart */
+.chart-wrap {
+  width: 100%; overflow-x: auto; padding-top: 6px;
+}
+.chart-bars {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 130px; padding: 18px 4px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.bar-col {
+  flex: 1; min-width: 28px; display: flex; flex-direction: column;
+  align-items: center; height: 100%; justify-content: flex-end; cursor: pointer;
+}
+.bar-val { font-size: 0.65rem; color: var(--muted); margin-bottom: 3px; white-space: nowrap; }
+.bar-fill {
+  width: 100%; max-width: 32px; background: var(--accent);
+  border-radius: 5px 5px 0 0; min-height: 4px; transition: height 0.25s;
+}
+.bar-lbl { font-size: 0.68rem; color: var(--muted); margin-top: 5px; }
+
+/* Einheitliches Gewicht & Set-Liste */
 .ex-top {
   display: flex; justify-content: space-between; align-items: center;
   gap: 8px; margin-bottom: 10px;
@@ -122,7 +145,7 @@ label.lbl {
 
 .cal-summary {
   display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 8px; text-align: center; margin-bottom: 12px;
+  gap: 8px; text-align: center; margin-bottom: 10px;
 }
 .stat-box { background: var(--surface-2); border-radius: 10px; padding: 10px 6px; }
 .stat-val { font-size: 1.15rem; font-weight: 700; }
@@ -134,6 +157,18 @@ label.lbl {
   border: 2px solid transparent;
 }
 .swatch.active { border-color: #fff; transform: scale(1.1); }
+
+/* Detail Modal */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(6, 9, 17, 0.84); backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.modal-sheet {
+  width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto;
+  background: var(--surface); border-top: 1px solid var(--accent);
+  border-radius: 16px 16px 0 0; padding: 16px;
+}
 
 .nav {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
