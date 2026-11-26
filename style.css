@@ -23,10 +23,10 @@ body {
 
 .topbar {
   position: sticky; top: 0; z-index: 40;
-  background: rgba(11, 14, 20, 0.92);
+  background: rgba(11, 14, 20, 0.94);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  padding: 14px 16px;
+  padding: 12px 16px;
   display: flex; justify-content: space-between; align-items: center;
 }
 .topbar-title { font-weight: 700; font-size: 1.05rem; letter-spacing: 0.4px; }
@@ -44,7 +44,7 @@ body {
 
 .sec-head {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px; font-size: 0.85rem; font-weight: 700;
+  margin-bottom: 10px; font-size: 0.82rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted);
 }
 
@@ -58,7 +58,7 @@ body {
 .btn-soft { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
 .btn-ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); }
-.btn-sm { width: auto; padding: 6px 10px; font-size: 0.8rem; }
+.btn-sm { width: auto; padding: 6px 10px; font-size: 0.78rem; }
 
 input, select {
   width: 100%; background: var(--surface-2); color: var(--text);
@@ -76,7 +76,6 @@ label.lbl {
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
-/* Einheitliches Gewicht & Set-Liste */
 .ex-top {
   display: flex; justify-content: space-between; align-items: center;
   gap: 8px; margin-bottom: 10px;
@@ -111,29 +110,24 @@ label.lbl {
 }
 .set-row.done .chk { background: var(--accent); color: #060911; border-color: var(--accent); }
 
-/* Live Banner */
 .live-bar {
   display: flex; justify-content: space-between; align-items: center;
   background: var(--surface); border: 1px solid var(--accent);
   border-radius: 12px; padding: 12px; margin-bottom: 12px;
 }
 .pill {
-  padding: 5px 10px; border-radius: 8px; font-weight: 700; font-size: 0.9rem;
+  padding: 5px 10px; border-radius: 8px; font-weight: 700; font-size: 0.88rem;
   background: var(--accent-soft); color: var(--accent);
 }
 
-/* Kalorien Bilanz */
 .cal-summary {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 8px; text-align: center; margin-bottom: 12px;
 }
-.stat-box {
-  background: var(--surface-2); border-radius: 10px; padding: 10px 6px;
-}
+.stat-box { background: var(--surface-2); border-radius: 10px; padding: 10px 6px; }
 .stat-val { font-size: 1.15rem; font-weight: 700; }
 .stat-lbl { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 
-/* Color Swatches */
 .swatches { display: flex; gap: 10px; margin-top: 6px; }
 .swatch {
   width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
@@ -141,7 +135,6 @@ label.lbl {
 }
 .swatch.active { border-color: #fff; transform: scale(1.1); }
 
-/* Bottom Nav */
 .nav {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
   background: rgba(11, 14, 20, 0.96); backdrop-filter: blur(10px);
